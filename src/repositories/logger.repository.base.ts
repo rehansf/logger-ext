@@ -21,7 +21,6 @@ export abstract class LoggerRepository<
 
   definePersistedModel(entityClass: typeof Entity) {
     const modelClass = super.definePersistedModel(entityClass);
-    debugger
     const auditLog = new AuditLog();
     auditLog.actionTime = new Date().toISOString();
 
@@ -31,12 +30,10 @@ export abstract class LoggerRepository<
         auditLog.actionType = Action.INSERT_ONE
       }
       auditLog.modelName = ctx.Model.modelName
-      debugger
       console.log(`going to save ${ctx.Model.modelName}`);
     });
 
     modelClass.observe('after save', async ctx => {
-      debugger
       switch (auditLog.actionType) {
         case Action.INSERT_ONE:
           console.log('Insert one is trigged');
@@ -57,7 +54,6 @@ export abstract class LoggerRepository<
           console.log('delete mnay is trigged');
           break;
       }
-      debugger
       console.log(`have been saved ${ctx.Model.modelName}`);
     });
 

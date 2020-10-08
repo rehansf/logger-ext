@@ -1,6 +1,5 @@
 import {
   Application,
-
   Component,
   config,
   ContextTags,
