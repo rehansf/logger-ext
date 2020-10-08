@@ -55,10 +55,11 @@ export abstract class LoggerRepository<
           break;
       }
       console.log(`have been saved ${ctx.Model.modelName}`);
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.auditLogRepository.create(auditLog);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.auditLogRepository.create(auditLog);
 
     return modelClass;
   }

@@ -46,7 +46,6 @@ export class AuditLog extends Entity {
 
   @property({
     type: 'string',
-    required: true,
   })
   entityId: string;
 
@@ -57,7 +56,6 @@ export class AuditLog extends Entity {
 
   @property({
     type: 'string',
-    required: true,
   })
   condition?: string;
 
