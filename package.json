@@ -1,6 +1,6 @@
 {
   "name": "@rehansf/logger",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "A logger for loopback",
   "keywords": [
     "loopback-extension",
@@ -43,6 +43,7 @@
     "@loopback/repository": "^3.1.0"
   },
   "dependencies": {
+    "@loopback/repository": "^3.1.0",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
