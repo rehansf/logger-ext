@@ -22,60 +22,79 @@ export abstract class LoggerRepository<
     const modelClass = super.definePersistedModel(entityClass);
     const auditLog = new AuditLog();
     auditLog.actionTime = new Date().toISOString();
+    let isReplace = false;
 
     modelClass.observe('before delete', async ctx => {
-      console.log('Before delete is triggerd');
+      const oldData = await ctx.Model.find({
+        where: ctx.where
+      });
+      auditLog.before = JSON.stringify(oldData);
       auditLog.actionType = Action.DELETE_ONE;
       auditLog.modelName = ctx.Model.modelName;
       auditLog.condition = JSON.stringify(ctx.where);
     });
 
     modelClass.observe('after delete', async ctx => {
-      console.log('After delete is triggerd');
       auditLog.impactCount = ctx.info.count;
-
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.auditLogRepository.create(auditLog);
     });
 
     modelClass.observe('before save', async ctx => {
-      if (ctx.isNewInstance) {
-        auditLog.actionType = Action.INSERT_ONE
+      // Where is only undefined on Create and PUT request (replaceById)
+      // Else this is an update request/ PATCH
+      if (ctx.where === undefined) {
         auditLog.payload = JSON.stringify(ctx.instance);
-      } else {
-        if (ctx.where === undefined /* PUT Request */) {
-          console.log('This is a put request');
-          auditLog.actionType = Action.UPDATE_ONE;
-        } else {
-          console.log('This is a probably a patch request')
-          auditLog.actionType = Action.UPDATE_ONE;
-          auditLog.condition = JSON.stringify(ctx.where);
-        }
-      }
-      auditLog.modelName = ctx.Model.modelName;
 
-      console.log(`going to save ${ctx.Model.modelName}`);
+        // If instance.id is not set then it is a create request
+        if (ctx.instance.id === undefined) {
+          // Create request
+          console.log('Create Request')
+          auditLog.actionType = Action.INSERT_ONE
+        } else {
+          // Replace request
+          console.log('Replace Request');
+          isReplace = true;
+          const beforeData = await ctx.Model.findById(ctx.instance.id);
+          auditLog.before = JSON.stringify(beforeData);
+          auditLog.actionType = Action.UPDATE_ONE;
+        }
+      } else {
+        // Update(One/Many) request
+        console.log('Update Request');
+        auditLog.actionType = Action.UPDATE_MANY;
+
+        const beforeData = await ctx.Model.find({where: ctx.where});
+        auditLog.before = JSON.stringify(beforeData);
+        auditLog.condition = JSON.stringify(ctx.where);
+      }
+
+      auditLog.modelName = ctx.Model.modelName;
     });
 
     modelClass.observe('after save', async ctx => {
-      console.log(ctx);
+      let afterData;
       switch (auditLog.actionType) {
         case Action.INSERT_ONE:
-          auditLog.after = JSON.stringify(ctx.instance);
+          afterData = await ctx.Model.findById(ctx.instance.id);
+          auditLog.after = JSON.stringify(afterData);
           auditLog.modelId = JSON.stringify(ctx.instance.id);
           break;
+
         case Action.UPDATE_ONE:
-          console.log('update one is triggerd');
+          if (isReplace) {
+            afterData = await ctx.Model.findById(ctx.instance.id);
+          } else {
+            afterData = await ctx.Model.find({where: ctx.where});
+          }
+          auditLog.after = JSON.stringify(afterData);
           break;
+
         case Action.UPDATE_MANY:
-          console.log('update many is triggerd');
-          break;
-        case Action.DELETE_ONE:
-          console.log('delete one is triggerd');
+          afterData = await ctx.Model.find({where: ctx.where});
+          auditLog.after = JSON.stringify(afterData);
           break;
       }
-      console.log(`have been saved ${ctx.Model.modelName}`);
-
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.auditLogRepository.create(auditLog);
     });
