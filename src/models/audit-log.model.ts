@@ -1,12 +1,11 @@
 import {Entity, model, property} from '@loopback/repository';
 
 export enum Action {
-  'INSERT_ONE',
-  'INSERT_MANY',
-  'UPDATE_ONE',
-  'UPDATE_MANY',
-  'DELETE_ONE',
-  'DELETE_MANY',
+  INSERT_ONE = 'INSERT_ONE',
+  UPDATE_ONE = 'UPDATE_ONE',
+  UPDATE_MANY = 'UPDATE_MANY',
+  DELETE_ONE = 'DELETE_ONE',
+  DELETE_MANY = 'DELETE_MANY',
 }
 
 @model()
@@ -42,12 +41,17 @@ export class AuditLog extends Entity {
   @property({
     type: 'string',
   })
+  impactCount?: number;
+
+  @property({
+    type: 'string',
+  })
   tag?: string;
 
   @property({
     type: 'string',
   })
-  entityId: string;
+  modelId: string;
 
   @property({
     type: 'string',

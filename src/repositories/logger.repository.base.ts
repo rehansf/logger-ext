@@ -4,16 +4,15 @@ import {Action} from '../models/audit-log.model';
 import {AuditLogRepository} from './audit-log.repository';
 
 export abstract class LoggerRepository<
-  T extends Entity,
-  ID,
-  Relations extends object = {}
+  T extends Entity, ID, Relations extends object = {}
   > extends DefaultCrudRepository<T, ID, Relations> {
+
   private auditLogRepository;
   constructor(
     entityClass: typeof Entity & {
       prototype: T;
     },
-    dataSource: juggler.DataSource
+    dataSource: juggler.DataSource,
   ) {
     super(entityClass, dataSource);
     this.auditLogRepository = new AuditLogRepository(dataSource)
@@ -24,34 +23,55 @@ export abstract class LoggerRepository<
     const auditLog = new AuditLog();
     auditLog.actionTime = new Date().toISOString();
 
+    modelClass.observe('before delete', async ctx => {
+      console.log('Before delete is triggerd');
+      auditLog.actionType = Action.DELETE_ONE;
+      auditLog.modelName = ctx.Model.modelName;
+      auditLog.condition = JSON.stringify(ctx.where);
+    });
+
+    modelClass.observe('after delete', async ctx => {
+      console.log('After delete is triggerd');
+      auditLog.impactCount = ctx.info.count;
+
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      this.auditLogRepository.create(auditLog);
+    });
+
     modelClass.observe('before save', async ctx => {
-      // TODO: Write logic to decide action
       if (ctx.isNewInstance) {
         auditLog.actionType = Action.INSERT_ONE
+        auditLog.payload = JSON.stringify(ctx.instance);
+      } else {
+        if (ctx.where === undefined /* PUT Request */) {
+          console.log('This is a put request');
+          auditLog.actionType = Action.UPDATE_ONE;
+        } else {
+          console.log('This is a probably a patch request')
+          auditLog.actionType = Action.UPDATE_ONE;
+          auditLog.condition = JSON.stringify(ctx.where);
+        }
       }
-      auditLog.modelName = ctx.Model.modelName
+      auditLog.modelName = ctx.Model.modelName;
+
       console.log(`going to save ${ctx.Model.modelName}`);
     });
 
     modelClass.observe('after save', async ctx => {
+      console.log(ctx);
       switch (auditLog.actionType) {
         case Action.INSERT_ONE:
-          console.log('Insert one is trigged');
-          break;
-        case Action.INSERT_MANY:
-          console.log('Insert many is trigged ');
+          auditLog.after = JSON.stringify(ctx.instance);
+          auditLog.modelId = JSON.stringify(ctx.instance.id);
           break;
         case Action.UPDATE_ONE:
-          console.log('update one is trigged');
+          console.log('update one is triggerd');
           break;
         case Action.UPDATE_MANY:
-          console.log('update many is trigged');
+          console.log('update many is triggerd');
           break;
         case Action.DELETE_ONE:
-          console.log('delete one is trigged');
-          break;
-        case Action.DELETE_MANY:
-          console.log('delete mnay is trigged');
+          console.log('delete one is triggerd');
           break;
       }
       console.log(`have been saved ${ctx.Model.modelName}`);
@@ -59,30 +79,6 @@ export abstract class LoggerRepository<
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
       this.auditLogRepository.create(auditLog);
     });
-
-
     return modelClass;
   }
-
-  //   modelClass.observe('before save', async ctx => {
-  //     // auditLog.modelName = `${ctx.Model.modelName}`
-  //     // auditLog.isNewInstance = !!ctx.isNewInstance;
-  //     // auditLog.before = "{}";
-  //     // if (auditLog.isNewInstance) {
-  //     auditLog.payload = JSON.stringify(ctx.instance);
-  //     // } else {
-  //     //   auditLog.payload = JSON.stringify(ctx.data);
-  //     //   auditLog.where = JSON.stringify(ctx.where);
-  //     // }
-  //   });
-
-  //   modelClass.observe('after save', async ctx => {
-  //     console.log('CTX after save', ctx);
-  //     console.log('CTX after save as JSON', JSON.stringify(ctx));
-  //     // auditLog.modelId = `${ctx.data?.id}`;
-  //     // auditLog.after = JSON.stringify(ctx.instance);
-  //     // this.auditLogRepository.create(auditLog);
-  //   });
-  //   return modelClass;
-  // }
 }
