@@ -30,3 +30,10 @@ export class MyApplication extends BootMixin(ServiceMixin(RepositoryMixin(RestAp
   // ...
 }
 ```
+
+## How to use it with postgres
+Import model in `index.ts` and export it.
+
+```js
+export * from '@rehansf/logger/dist/models';
+```
