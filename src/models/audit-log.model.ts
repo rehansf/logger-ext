@@ -4,8 +4,8 @@ export enum Action {
   INSERT_ONE = 'INSERT_ONE',
   UPDATE_ONE = 'UPDATE_ONE',
   UPDATE_MANY = 'UPDATE_MANY',
-  DELETE_ONE = 'DELETE_ONE',
-  DELETE_MANY = 'DELETE_MANY',
+  DELETE_ONE = 'DELETE_ONE', // Working as expected
+  DELETE_MANY = 'DELETE_MANY', // Is not created by default crud
 }
 
 @model()
@@ -13,9 +13,9 @@ export class AuditLog extends Entity {
   @property({
     type: 'number',
     id: true,
-    generated: false,
+    generated: false
   })
-  id?: number;
+  id: number;
 
   @property({
     type: 'string',

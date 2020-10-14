@@ -39,11 +39,11 @@
     "!*/__tests__"
   ],
   "peerDependencies": {
-    "@loopback/core": "^2.10.1",
-    "@loopback/repository": "^3.1.0"
+    "@loopback/core": "^2.10.1"
   },
   "dependencies": {
     "@loopback/repository": "^3.1.0",
+    "@loopback/rest": "^8.0.0",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
