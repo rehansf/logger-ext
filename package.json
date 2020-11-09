@@ -1,6 +1,6 @@
 {
   "name": "@rehansf/logger",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "A logger for loopback",
   "keywords": [
     "loopback-extension",
@@ -31,7 +31,7 @@
     "type": "git"
   },
   "author": "Rehan Raza <rehan.raza@sourcefuse.com>",
-  "license": "",
+  "license": "ISC",
   "files": [
     "README.md",
     "dist",

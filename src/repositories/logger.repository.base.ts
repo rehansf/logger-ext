@@ -163,8 +163,16 @@ export abstract class LoggerRepository<
           console.log(afterData);
           ctx.hookState.auditLog.after = JSON.stringify(afterData);
           if (Array.isArray(afterData)) {
+            const beforeData = JSON.parse(
+              JSON.stringify(ctx.hookState.auditLog.before),
+            );
             afterData.forEach(afterDataObj => {
               ctx.hookState.auditLog.after = JSON.stringify(afterDataObj);
+              ctx.hookState.auditLog.before = JSON.stringify(
+                beforeData.find(
+                  (bd: {id: unknown}) => bd.id === afterDataObj.getId(),
+                ),
+              );
               this.auditLogRepository
                 .create(ctx.hookState.auditLog)
                 .then(_ => {})
@@ -179,8 +187,6 @@ export abstract class LoggerRepository<
           }
           break;
       }
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      // this.auditLogRepository.create(ctx.hookState.auditLog);
     });
     return modelClass;
   }
