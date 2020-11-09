@@ -1,4 +1,9 @@
-import {DefaultCrudRepository, Entity, Getter, juggler} from '@loopback/repository';
+import {
+  DefaultCrudRepository,
+  Entity,
+  Getter,
+  juggler,
+} from '@loopback/repository';
 import {AuditLog} from '../models';
 import {Action} from '../models/audit-log.model';
 import {AuditLogRepository} from './audit-log.repository';
@@ -8,21 +13,20 @@ export interface IAuthUser {
 }
 
 export abstract class LoggerRepository<
-  T extends Entity, ID, Relations extends object = {}
-  > extends DefaultCrudRepository<T, ID, Relations> {
-
+  T extends Entity,
+  ID,
+  Relations extends object = {}
+> extends DefaultCrudRepository<T, ID, Relations> {
   private auditLogRepository;
   constructor(
     entityClass: typeof Entity & {
       prototype: T;
     },
     dataSource: juggler.DataSource,
-    protected readonly getCurrentUser?: Getter<
-      IAuthUser | undefined
-    >,
+    protected readonly getCurrentUser?: Getter<IAuthUser | undefined>,
   ) {
     super(entityClass, dataSource);
-    this.auditLogRepository = new AuditLogRepository(dataSource)
+    this.auditLogRepository = new AuditLogRepository(dataSource);
   }
 
   definePersistedModel(entityClass: typeof Entity) {
@@ -32,7 +36,7 @@ export abstract class LoggerRepository<
       ctx.hookState.auditLog = new AuditLog();
       ctx.hookState.auditLog.actionTime = new Date().toISOString();
       const oldData = await ctx.Model.find({
-        where: ctx.where
+        where: ctx.where,
       });
 
       if (oldData) {
@@ -49,22 +53,37 @@ export abstract class LoggerRepository<
       if (this.getCurrentUser) {
         const currentUser = await this.getCurrentUser();
         if (currentUser) {
-          ctx.hookState.auditLog.actor = `${currentUser.id}`
+          ctx.hookState.auditLog.actor = `${currentUser.id}`;
         }
       }
     });
 
     modelClass.observe('after delete', async ctx => {
       ctx.hookState.auditLog.impactCount = ctx.info.count;
+
+      if (Array.isArray(JSON.parse(ctx.hookState.auditLog.before))) {
+        JSON.parse(ctx.hookState.auditLog.before).forEach(
+          (beforeData: object) => {
+            ctx.hookState.auditLog.before = JSON.stringify(beforeData);
+            this.auditLogRepository
+              .create(ctx.hookState.auditLog)
+              .then(_ => {})
+              .catch(e => {});
+          },
+        );
+      }
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.auditLogRepository.create(ctx.hookState.auditLog);
+      // this.auditLogRepository.create(ctx.hookState.auditLog);
+      this.auditLogRepository
+        .create(ctx.hookState.auditLog)
+        .then(_ => {})
+        .catch(e => {});
     });
 
     modelClass.observe('before save', async ctx => {
       ctx.hookState.auditLog = new AuditLog();
       ctx.hookState.auditLog.actionTime = new Date().toISOString();
       ctx.hookState.isReplace = false;
-
 
       // Where is only undefined on Create and PUT request (replaceById)
       // Else this is an update request/ PATCH
@@ -74,8 +93,8 @@ export abstract class LoggerRepository<
         // If instance.id is not set then it is a create request
         if (ctx.instance.id === undefined) {
           // Create request
-          console.log('Create Request')
-          ctx.hookState.auditLog.actionType = Action.INSERT_ONE
+          console.log('Create Request');
+          ctx.hookState.auditLog.actionType = Action.INSERT_ONE;
         } else {
           // Replace request
           console.log('Replace Request');
@@ -104,7 +123,7 @@ export abstract class LoggerRepository<
         if (this.getCurrentUser) {
           const currentUser = await this.getCurrentUser();
           if (currentUser) {
-            ctx.hookState.auditLog.actor = `${currentUser.id}`
+            ctx.hookState.auditLog.actor = `${currentUser.id}`;
           }
         }
       }
@@ -119,6 +138,10 @@ export abstract class LoggerRepository<
           afterData = await ctx.Model.findById(ctx.instance.id);
           ctx.hookState.auditLog.after = JSON.stringify(afterData);
           ctx.hookState.auditLog.modelId = JSON.stringify(ctx.instance.id);
+          this.auditLogRepository
+            .create(ctx.hookState.auditLog)
+            .then(_ => {})
+            .catch(e => {});
           break;
 
         case Action.UPDATE_ONE:
@@ -128,15 +151,36 @@ export abstract class LoggerRepository<
             afterData = await ctx.Model.findOne({where: ctx.where});
           }
           ctx.hookState.auditLog.after = JSON.stringify(afterData);
+          this.auditLogRepository
+            .create(ctx.hookState.auditLog)
+            .then(_ => {})
+            .catch(e => {});
           break;
 
         case Action.UPDATE_MANY:
           afterData = await ctx.Model.find({where: ctx.where});
+          console.log(typeof afterData);
+          console.log(afterData);
           ctx.hookState.auditLog.after = JSON.stringify(afterData);
+          if (Array.isArray(afterData)) {
+            afterData.forEach(afterDataObj => {
+              ctx.hookState.auditLog.after = JSON.stringify(afterDataObj);
+              this.auditLogRepository
+                .create(ctx.hookState.auditLog)
+                .then(_ => {})
+                .catch(e => {});
+            });
+          } else {
+            ctx.hookState.auditLog.after = JSON.stringify(afterData);
+            this.auditLogRepository
+              .create(ctx.hookState.auditLog)
+              .then(_ => {})
+              .catch(e => {});
+          }
           break;
       }
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.auditLogRepository.create(ctx.hookState.auditLog);
+      // this.auditLogRepository.create(ctx.hookState.auditLog);
     });
     return modelClass;
   }
